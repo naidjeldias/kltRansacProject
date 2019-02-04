@@ -118,7 +118,7 @@ int main() {
     std::vector< DMatch > matches;
 
     //loading images
-    std::string path = "/media/nigel/Dados/Documents/Projetos/CLionProjects/RANSAC/images/";
+    std::string path = "/media/nigel/Dados/Documents/Projetos/CLionProjects/KLTRansac/images/";
     Mat left_frame  = imread(path + "left_0.png");
     Mat right_frame = imread(path + "left_1.png");
 
