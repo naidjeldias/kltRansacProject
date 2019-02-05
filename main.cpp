@@ -4,6 +4,7 @@
 #include "opencv2/features2d.hpp"
 #include "opencv2/xfeatures2d.hpp"
 
+
 using namespace cv;
 
 void bucketFeatureExtraction(Mat &image, Size block, std::vector<KeyPoint> &kpts) {
@@ -127,9 +128,18 @@ int main() {
     if(right_frame.channels() == 3)
         cvtColor(right_frame, right_frame, cv::COLOR_RGB2GRAY);
 
-    Ptr<FeatureDetector> detector = ORB::create(1000, 1.2f, 8, 31, 0, 2, ORB::HARRIS_SCORE, 31);
+    auto startTime = std::chrono::steady_clock::now();
+
+    auto startTotalTime = std::chrono::steady_clock::now();
+
+    Ptr<FeatureDetector> detector = ORB::create(500, 1.2f, 8, 31, 0, 2, ORB::FAST_SCORE, 31);
 
     detector -> detect(left_frame, kpts);
+
+    auto endTime = std::chrono::steady_clock::now();
+
+    std::cout << "Time to compute features: "<< std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count()
+              << " ms" << std::endl;
 
     //convert vector of keypoints to vector of Point2f
     std::vector<Point2f> prevPoints, nextPoints;
@@ -144,11 +154,25 @@ int main() {
     Size win (21,21);
     int maxLevel = 4;
 
+    startTime = std::chrono::steady_clock::now();
+
     buildOpticalFlowPyramid(left_frame, left_pyr, win, maxLevel, true);
     buildOpticalFlowPyramid(right_frame, right_pyr, win, maxLevel, true);
 
+    endTime = std::chrono::steady_clock::now();
+
+    std::cout << "Time to compute image pyramid: "<< std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count()
+              << " ms" << std::endl;
+
     Mat status;
+
+    startTime = std::chrono::steady_clock::now();
     calcOpticalFlowPyrLK(left_pyr, right_pyr, prevPoints, nextPoints, status, noArray(), win, maxLevel);
+
+    endTime = std::chrono::steady_clock::now();
+
+    std::cout << "Time to compute optical flow: "<< std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count()
+              << " ms" << std::endl;
 
     //get good features tracked
     for (int i = 0; i < status.rows; i++){
@@ -176,8 +200,19 @@ int main() {
     cv::Mat                 epLinesRight;
     cv::Mat                 finalMatchImage;
 
-    eightPoint.setRansacParameters(0.99, 8, 10, 0.9);
+    startTime = std::chrono::steady_clock::now();
+
+    eightPoint.setRansacParameters(0.99, 8, 10, 2.0);
     fmat = eightPoint.ransacEightPointAlgorithm(kpts_l, kpts_r, finalMatches, inliers, true, 0);
+
+    endTime              = std::chrono::steady_clock::now();
+    auto endTotalTime    = std::chrono::steady_clock::now();
+
+    std::cout << "Time to compute inliers: "<< std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count()
+              << " ms" << std::endl;
+
+    std::cout << "Elapsed time: "<< std::chrono::duration_cast<std::chrono::milliseconds>(endTotalTime - startTotalTime).count()
+              << " ms" << std::endl;
 
     epLinesLeft     = eightPoint.drawEpLines(kpts_l, kpts_r, fmat, inliers, 0, left_frame);
     epLinesRight    = eightPoint.drawEpLines(kpts_l, kpts_r, fmat, inliers, 1, right_frame);
